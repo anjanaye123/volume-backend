@@ -1,0 +1,7 @@
+flask
+flask-cors
+cadquery
+trimesh
+pandas
+requests
+numpy
