@@ -6,4 +6,5 @@ pandas
 requests
 numpy
 gunicorn
-cascadio @ git+https://github.com/cascadio/cascadio.git
+cascadio @ git+https://github.com/OpenCAX/cascadio.git
+
