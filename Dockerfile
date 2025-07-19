@@ -1,21 +1,24 @@
-# Base image with Python
 FROM python:3.10-slim
 
-# Set working directory
+# 1. Install system-level packages required for Open3D & CADQuery
+RUN apt-get update && apt-get install -y \
+    libx11-6 \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Set working directory
 WORKDIR /app
 
-# Copy requirements and install
+# 3. Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the code
+# 4. Copy app files
 COPY . .
 
-# Set environment variable (optional)
-ENV FLASK_APP=app.py
-
-# Expose Flask's port
-EXPOSE 5000
-
-# Start the Flask app
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+# 5. Run the app
+CMD ["python", "app.py"]
