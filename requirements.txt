@@ -1,8 +1,8 @@
-flask
-flask-cors
-cadquery
-trimesh
-pandas
-requests
-numpy
-gunicorn
+Flask==2.3.3
+Flask-CORS==4.0.0
+trimesh==3.23.5
+numpy==1.24.3
+requests==2.31.0
+python-multipart==0.0.6
+cadquery-ocp==7.7.2
+cadquery==2.4.0
