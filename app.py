@@ -30,7 +30,7 @@ except ImportError:
     print("❌ Trimesh not available")
 
 try:
-    import open3d as o3d
+    # import open3d as o3d
     import numpy as np
     CAD_METHODS['open3d'] = True
     print("✅ Open3D loaded successfully!")
