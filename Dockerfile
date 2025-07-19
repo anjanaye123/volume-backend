@@ -1,30 +1,21 @@
-# Use Python 3.11 slim as base
+# Base image with Python
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for CADQuery
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libxrender1 \
-    libxext6 \
-    libsm6 \
-    libgl1-mesa-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy everything
+# Copy the rest of the code
 COPY . .
 
-# Install Python dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Set environment variable (optional)
+ENV FLASK_APP=app.py
 
-# Expose the port Flask will run on
+# Expose Flask's port
 EXPOSE 5000
 
-# Start the app
-CMD ["python", "app.py"]
+# Start the Flask app
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
