@@ -1,25 +1,12 @@
-# Python bytecode
-__pycache__/
+.venv
+__pycache__
 *.pyc
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# IDE/editor configs
-.vscode/
-.idea/
-
-# System/macOS stuff
+*.pyo
+*.pyd
+.git
+.gitignore
+*.jpg
+*.png
+uploads/
 .DS_Store
 Thumbs.db
-
-# Node stuff (if ever)
-node_modules/
-
-# Allow these important files to be copied (ensure not accidentally ignored)
-!requirements.txt
-!Dockerfile
-!app.py
-!render.yaml
