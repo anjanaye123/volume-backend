@@ -187,33 +187,32 @@ MATERIAL_DATABASE = {
 # 🔧 PROCESS DATABASE - AUTO-SELECT BASED ON COMPLEXITY
 PROCESS_DATABASE = {
     # 3D PRINTING PROCESSES
-"fdm": {
-    "name": "FDM 3D Printing",
-    "complexity_multiplier": {
-        "pla": 0.02,
-        "abs": 0.025,
-        "petg": 0.03
+    "fdm": {
+        "name": "FDM 3D Printing",
+        "complexity_multiplier": {
+            "pla": 0.02,
+            "abs": 0.025,
+            "petg": 0.03
+        },
+        "category": "3D Printing"
     },
-    "category": "3D Printing"
-},
-"cnc_3axis": {
-    "name": "CNC 3-Axis Machining",
-    "complexity_multiplier": {
-        "aluminum": 0.05,
-        "mild_steel": 0.07,
-        "ss": 0.08
+    "cnc_3axis": {
+        "name": "CNC 3-Axis Machining",
+        "complexity_multiplier": {
+            "aluminum": 0.05,
+            "mild_steel": 0.07,
+            "ss": 0.08
+        },
+        "category": "CNC Machining"
     },
-    "category": "CNC Machining"
-},
-"cnc_5axis": {
-    "name": "CNC 5-Axis Machining",
-    "complexity_multiplier": {
-        "aluminum": 0.09,
-        "ss": 0.12
-    },
-    "category": "CNC Machining"
-}
-
+    "cnc_5axis": {
+        "name": "CNC 5-Axis Machining",
+        "complexity_multiplier": {
+            "aluminum": 0.09,
+            "ss": 0.12
+        },
+        "category": "CNC Machining"
+    }
 }
 
 # 🧊 CADQuery Analysis - PERFECT VOLUME CALCULATION IN MM³
@@ -537,7 +536,7 @@ def calculate_manufacturing_cost_exact(volume_data, material="aluminum_7075", pr
 
 @app.route('/analyze-and-calculate', methods=['POST', 'OPTIONS'])
 def analyze_and_calculate():
-    """🚀 FAST FAB AI MAIN ANALYSIS ENDPOINT - USING YOUR EXACT LOGIC"""
+    """🚀 FAST FAB AI MAIN ANALYSIS ENDPOINT - HANDLES BOTH FILE UPLOADS AND URLs"""
     
     # Handle preflight
     if request.method == 'OPTIONS':
@@ -546,51 +545,81 @@ def analyze_and_calculate():
     try:
         start_time = time.time()
         
-        # Get request data
-        data = request.get_json()
-        if not data:
-            return jsonify({"success": False, "error": "No JSON data provided"}), 400
-        
-        file_url = data.get("file_url")
-        material = data.get("material", "aluminum_7075")
-        process = data.get("process", "cnc_3axis")
-        delivery = data.get("delivery", "standard")
-        quantity = int(data.get("quantity", 1))
-        
-        if not file_url:
-            return jsonify({"success": False, "error": "No file URL provided"}), 400
+        # Check if it's a file upload or JSON with URL
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            # Handle file upload from frontend
+            logger.info("📁 Handling direct file upload...")
+            
+            # Get uploaded file
+            if 'file' not in request.files:
+                return jsonify({"success": False, "error": "No file uploaded"}), 400
+            
+            uploaded_file = request.files['file']
+            if uploaded_file.filename == '':
+                return jsonify({"success": False, "error": "Empty filename"}), 400
+            
+            # Get form parameters
+            material = request.form.get("material", "aluminum_7075")
+            process = request.form.get("process", "cnc_3axis")
+            delivery = request.form.get("delivery", "standard")
+            quantity = int(request.form.get("quantity", 1))
+            
+            # Save uploaded file
+            file_ext = uploaded_file.filename.split('.')[-1].lower()
+            filename = f"{uuid.uuid4()}.{file_ext}"
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            
+            uploaded_file.save(filepath)
+            logger.info(f"✅ File uploaded: {uploaded_file.filename}")
+            
+        else:
+            # Handle JSON with file URL (existing logic)
+            logger.info("🔗 Handling file URL...")
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({"success": False, "error": "No JSON data provided"}), 400
+            
+            file_url = data.get("file_url")
+            material = data.get("material", "aluminum_7075")
+            process = data.get("process", "cnc_3axis")
+            delivery = data.get("delivery", "standard")
+            quantity = int(data.get("quantity", 1))
+            
+            if not file_url:
+                return jsonify({"success": False, "error": "No file URL provided"}), 400
+            
+            # Download file (existing logic)
+            try:
+                file_ext = file_url.split('.')[-1].lower()
+                filename = f"{uuid.uuid4()}.{file_ext}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                
+                logger.info(f"📥 Downloading file...")
+                response = requests.get(file_url, timeout=60)
+                response.raise_for_status()
+                
+                with open(filepath, "wb") as f:
+                    f.write(response.content)
+                
+                logger.info(f"✅ File downloaded: {len(response.content)} bytes")
+                
+            except Exception as e:
+                logger.error(f"❌ Download failed: {str(e)}")
+                return jsonify({"success": False, "error": f"Download failed: {str(e)}"}), 400
         
         logger.info(f"🚀 FAST FAB AI ANALYSIS REQUEST - YOUR EXACT LOGIC:")
-        logger.info(f"   📁 File: {file_url}")
+        logger.info(f"   📁 File: {filename}")
         logger.info(f"   🔧 Material: {material}")
         logger.info(f"   ⚙️ Process: {process}")
         logger.info(f"   📦 Quantity: {quantity}")
         logger.info(f"   🚚 Delivery: {delivery}")
         
-        # Download file
-        try:
-            file_ext = file_url.split('.')[-1].lower()
-            filename = f"{uuid.uuid4()}.{file_ext}"
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            
-            logger.info(f"📥 Downloading file...")
-            response = requests.get(file_url, timeout=60)
-            response.raise_for_status()
-            
-            with open(filepath, "wb") as f:
-                f.write(response.content)
-            
-            logger.info(f"✅ File downloaded: {len(response.content)} bytes")
-            
-        except Exception as e:
-            logger.error(f"❌ Download failed: {str(e)}")
-            return jsonify({"success": False, "error": f"Download failed: {str(e)}"}), 400
-        
-        # Run analysis
+        # Run analysis (existing logic)
         try:
             logger.info(f"🔍 Starting analysis...")
             volume_data = analyze_file_all_methods(filepath, filename)
-            logger.info(f"✅ Analysis complete!")
+            logger.info(f"✅ Analysis complete! Method: {volume_data['method']}")
             
         except Exception as e:
             logger.error(f"❌ Analysis failed: {str(e)}")
@@ -598,7 +627,7 @@ def analyze_and_calculate():
                 os.remove(filepath)
             return jsonify({"success": False, "error": f"Analysis failed: {str(e)}"}), 500
         
-        # Calculate cost using YOUR EXACT LOGIC
+        # Calculate cost using YOUR EXACT LOGIC (existing logic)
         try:
             logger.info(f"💰 Calculating cost using YOUR EXACT LOGIC...")
             cost_data = calculate_manufacturing_cost_exact(volume_data, material, process, delivery, quantity)
@@ -616,7 +645,7 @@ def analyze_and_calculate():
         
         processing_time = round((time.time() - start_time) * 1000)
         
-        # Create response
+        # Create response (existing logic)
         response_data = {
             "success": True,
             "quote_id": f"FASTFAB{datetime.now().strftime('%Y%m%d%H%M%S')}",
@@ -641,12 +670,31 @@ def analyze_and_calculate():
             "message": f"Fast Fab AI Analysis complete using YOUR EXACT LOGIC! Method: {volume_data['method']} - Volume: {volume_data['volume_mm3']} mm³ - Cost: ₹{cost_data['total_cost']}"
         }
         
-        logger.info(f"🎉 FAST FAB AI SUCCESS USING YOUR EXACT LOGIC! Returning response")
+        logger.info(f"🎉 FAST FAB AI SUCCESS USING YOUR EXACT LOGIC! Method: {volume_data['method']}")
         return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"🔥 Unexpected error: {str(e)}")
         return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
+
+@app.route('/debug-cadquery', methods=['GET'])
+def debug_cadquery():
+    """Debug CADQuery availability"""
+    try:
+        import cadquery as cq
+        import OCP
+        return jsonify({
+            "cadquery_available": True,
+            "cadquery_version": cq.__version__ if hasattr(cq, '__version__') else "Unknown",
+            "ocp_available": True,
+            "status": "CADQuery is working!"
+        })
+    except ImportError as e:
+        return jsonify({
+            "cadquery_available": False,
+            "error": str(e),
+            "status": "CADQuery import failed"
+        })
 
 @app.route('/materials', methods=['GET'])
 def get_materials():
@@ -715,7 +763,8 @@ def root():
         "endpoints": {
             "/materials": "GET - List all materials (no prices shown)",
             "/processes": "GET - List all processes (no prices shown)", 
-            "/analyze-and-calculate": "POST - Calculate manufacturing quote using YOUR EXACT LOGIC",
+            "/analyze-and-calculate": "POST - Calculate manufacturing quote using YOUR EXACT LOGIC (supports both file upload and URL)",
+            "/debug-cadquery": "GET - Debug CADQuery availability and version",
             "/health": "GET - Health check"
         },
         "features": [
@@ -726,7 +775,9 @@ def root():
             "Real volume calculation from CAD files",
             "Exact densities and market prices from Google",
             "Complete data storage and analysis",
-            "No pricing shown to users - backend only"
+            "No pricing shown to users - backend only",
+            "Supports both direct file uploads and file URLs",
+            "CADQuery debugging endpoint"
         ]
     })
 
